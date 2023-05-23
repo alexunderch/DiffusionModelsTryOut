@@ -1,0 +1,19 @@
+wandb:
+  project_name: base_ddpm_training
+  name: text_guided
+clip_model_name: "ViT-B-32"
+prompt: dqdqwedbiqwcqkajcdnqaq
+
+defaults:
+  - dataset: mnist
+  - noise_scheduler: ddim
+pipeline: null
+exp_lr_schedule: 0.91
+batch_size: 32
+num_workers: 2
+guidance_rate: 0
+device: cuda
+lr: 1.0e-3
+n_epochs: 10
+log_samples_every: 100
+grad_accumulation_steps: 1

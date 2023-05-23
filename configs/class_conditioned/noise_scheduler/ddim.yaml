@@ -1,0 +1,4 @@
+_target_: base_ddpm_training.NoiseScheduler
+name: DDIM
+beta_schedule: squaredcos_cap_v2
+inference_timesteps: 50

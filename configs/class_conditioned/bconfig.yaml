@@ -1,0 +1,20 @@
+wandb:
+  project_name: base_ddpm_training
+  name: class_guided
+
+defaults:
+  - dataset: mnist
+  - noise_scheduler: ddim
+pipeline: null
+model:
+  model_size: small
+  class_emb_size: 6
+exp_lr_schedule: 0.91
+batch_size: 32
+num_workers: 2
+guidance_rate: 0
+device: cuda
+lr: 1.0e-3
+n_epochs: 10
+log_samples_every: 100
+grad_accumulation_steps: 1
