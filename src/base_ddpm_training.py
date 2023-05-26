@@ -1,16 +1,20 @@
 from tqdm.auto import tqdm
-from metrics import compute_metrics, plot_grid
+from metrics import compute_metrics
 from models import ClassConditionedUnet
 from scheduling import sampling_loop, train_step
 import wandb, hydra
 from omegaconf import DictConfig, OmegaConf
 import torch
 from hydra.utils import instantiate
-from utils import Dataset, NoiseScheduler
+from utils import (Dataset, 
+                   NoiseScheduler,
+                   plot_schedule, 
+                   plot_grid)
 
 
 @hydra.main(version_base=None, config_path="../configs/class_conditioned/", config_name="bconfig")
 def run(config: DictConfig) -> None:
+
     # print(OmegaConf.to_yaml(config, resolve=True))
     wandb.init(config=OmegaConf.to_container(config, resolve=True), 
                project=config.wandb.project_name+f"_ds_{config.dataset.name}", 
@@ -27,6 +31,8 @@ def run(config: DictConfig) -> None:
                                model_size=config.model.model_size).to(device)
 
     noise_scheduler = instantiate(config.noise_scheduler)()
+    wandb.log({"Noise scheduler": plot_schedule(noise_scheduler)})
+
     opt = torch.optim.AdamW(net.parameters(), lr=config.lr) 
     scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=config.exp_lr_schedule)
 
@@ -48,7 +54,7 @@ def run(config: DictConfig) -> None:
                 y = torch.arange(0, 10).to(device)
                 real = x
                 generated = sampling_loop(net, noise_scheduler, {"sample": noise_x, "label": y}) 
-                wandb.log(compute_metrics(generated.expand(-1, 3,-1,-1), real.expand(-1, 3,-1,-1)))
+                wandb.log(compute_metrics(generated.expand(-1, 3,-1,-1), real.expand(-1, 3,-1,-1), device=device))
                 wandb.log({f'Sample generations': wandb.Image(plot_grid(generated, nrow=num_classes//2))})
         scheduler.step()
 
