@@ -4,8 +4,8 @@ import torch
 import torch.nn as nn
 from torchvision import transforms as T
 from typing import Callable
-from transformers import AutoTokenizer, CLIPTextModel
-
+from transformers import AutoTokenizer, CLIPTextModel, logging
+logging.set_verbosity_error()
 class ClassConditionedUnet(nn.Module):
     def __init__(self, n_channels: int, 
                image_size: int, 
@@ -24,14 +24,12 @@ class ClassConditionedUnet(nn.Module):
             in_channels=n_channels + class_emb_size, # Additional input channels for class cond.
             out_channels=n_channels,           # the number of output channels
             layers_per_block=2,       # how many ResNet layers to use per UNet block
-            block_out_channels=(32, 64, 64), 
+            block_out_channels=(32, 64), 
             down_block_types=( 
                 "DownBlock2D",        # a regular ResNet downsampling block
                 "AttnDownBlock2D",    # a ResNet downsampling block with spatial self-attention
-                "AttnDownBlock2D",
             ), 
             up_block_types=(
-                "AttnUpBlock2D", 
                 "AttnUpBlock2D",      # a ResNet upsampling block with spatial self-attention
                 "UpBlock2D",          # a regular ResNet upsampling block
                 ),
@@ -78,9 +76,10 @@ class TextConditionedUnet(nn.Module):
                 "CrossAttnUpBlock2D",      # a ResNet upsampling block with spatial self-attention
                 "UpBlock2D",          # a regular ResNet upsampling block
                 ),
+            cross_attention_dim=512,
             addition_embed_type="text")   
               
-        self.encoder_hid_proj = nn.Linear(self.tmodel.config.hidden_size, 1280)
+        self.encoder_hid_proj = nn.Identity()#nn.Linear(self.tmodel.config.hidden_size, 1280)
 
     def forward(self, x: torch.Tensor, t: torch.Tensor, text: str = None) -> torch.Tensor:
         bs, _, w, h = x.shape

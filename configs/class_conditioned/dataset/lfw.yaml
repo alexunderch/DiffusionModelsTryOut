@@ -1,5 +1,5 @@
 _target_: base_ddpm_training.Dataset
 download: True
+train_split: train
 root: "./datasets"
-name: MNIST
-train: True
+name: LFW

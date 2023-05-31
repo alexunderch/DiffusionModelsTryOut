@@ -1,5 +1,5 @@
 _target_: base_ddpm_training.Dataset
 download: True
 root: "./datasets"
-name: MNIST
-train: True
+name: FMNIST
+train_split: True

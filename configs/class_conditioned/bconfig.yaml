@@ -1,14 +1,13 @@
 wandb:
   project_name: base_ddpm_training
   name: class_guided
-
 defaults:
   - dataset: mnist
   - noise_scheduler: ddim
-pipeline: null
 model:
   model_size: small
   class_emb_size: 6
+seed: 42
 exp_lr_schedule: 0.91
 batch_size: 32
 num_workers: 2

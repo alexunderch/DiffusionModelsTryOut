@@ -9,12 +9,13 @@ from hydra.utils import instantiate
 from utils import (Dataset, 
                    NoiseScheduler,
                    plot_schedule, 
-                   plot_grid)
+                   plot_grid, 
+                   set_seed)
 
 
 @hydra.main(version_base=None, config_path="../configs/class_conditioned/", config_name="bconfig")
 def run(config: DictConfig) -> None:
-
+    set_seed(config.seed)
     # print(OmegaConf.to_yaml(config, resolve=True))
     wandb.init(config=OmegaConf.to_container(config, resolve=True), 
                project=config.wandb.project_name+f"_ds_{config.dataset.name}", 
@@ -50,12 +51,12 @@ def run(config: DictConfig) -> None:
                 opt.step()
                 
             if (step+1)%config.log_samples_every==0:
-                noise_x = torch.randn(10, n_channels, image_size, image_size).to(device) # Batch of 10
-                y = torch.arange(0, 10).to(device)
-                real = x
-                generated = sampling_loop(net, noise_scheduler, {"sample": noise_x, "label": y}) 
+                noise_x = torch.randn(num_classes, n_channels, image_size, image_size).to(device) # Batch of 10
+                y = torch.arange(0, num_classes).to(device)
+                real = x.to(device)
+                generated = sampling_loop(net, noise_scheduler, {"sample": noise_x, "label": y}).to(device) 
                 wandb.log(compute_metrics(generated.expand(-1, 3,-1,-1), real.expand(-1, 3,-1,-1), device=device))
-                wandb.log({f'Sample generations': wandb.Image(plot_grid(generated, nrow=num_classes//2))})
+                wandb.log({f'Sample generations': wandb.Image(plot_grid(generated, nrow=num_classes//4))})
         scheduler.step()
 
 

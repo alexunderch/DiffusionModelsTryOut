@@ -7,12 +7,18 @@ import torch, hydra
 import wandb
 from hydra.utils import instantiate
 from scheduling import ttrain_step, tsampling_loop
-from utils import Dataset, NoiseScheduler, plot_grid, plot_schedule
+from utils import (Dataset, 
+                   NoiseScheduler, 
+                   plot_grid, 
+                   plot_schedule, 
+                   set_seed)
 
 
 
 @hydra.main(version_base=None, config_path="../configs/text_conditioned", config_name="bconfig")
 def run(config: DictConfig) -> None:
+    set_seed(config.seed)
+
     wandb.init(config=OmegaConf.to_container(config, resolve=True), 
                project=config.wandb.project_name+f"_ds_{config.dataset.name}", 
                name=config.wandb.name+f"_sch{config.noise_scheduler.name}_gr{config.guidance_rate}")
@@ -48,7 +54,7 @@ def run(config: DictConfig) -> None:
                 noise_x = torch.randn(4, n_channels, image_size, image_size).to(device) # Batch of 10
                 real = x.to(device)
                 generated = tsampling_loop(net, noise_scheduler, {"sample": noise_x, "text": prompt}) 
-                wandb.log(compute_metrics(generated.expand(-1, 3,-1,-1), real.expand(-1, 3,-1,-1), device=device, text=[prompt]*len(generated)))
+                # wandb.log(compute_metrics(generated.expand(-1, 3,-1,-1), real.expand(-1, 3,-1,-1), device=device, text=[prompt]*len(generated)))
                 wandb.log({f'Sample generations': wandb.Image(plot_grid(generated, nrow=num_classes//2))})
         scheduler.step()
 
