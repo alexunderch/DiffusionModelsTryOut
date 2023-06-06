@@ -6,7 +6,8 @@ prompt: nine
 
 defaults:
   - dataset: mnist
-  - noise_scheduler: ddim
+  - noise_scheduler: ddpm
+  - noise_scheduler_sample: ddim
 
 seed: 42
 exp_lr_schedule: 0.91

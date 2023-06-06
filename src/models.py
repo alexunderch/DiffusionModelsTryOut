@@ -6,14 +6,49 @@ from torchvision import transforms as T
 from typing import Callable
 from transformers import AutoTokenizer, CLIPTextModel, logging
 logging.set_verbosity_error()
+
+def predifined_model_config(model_size: str = None):
+    config = {}
+    if model_size == "small":
+        config = dict(layers_per_block=2,       # how many ResNet layers to use per UNet block
+                    block_out_channels=(32, 64, 64), 
+                    down_block_types=( 
+                        "DownBlock2D",        # a regular ResNet downsampling block
+                        "AttnDownBlock2D",    # a ResNet downsampling block with spatial self-attention
+                        "AttnDownBlock2D"), 
+                    up_block_types=(
+                        "AttnUpBlock2D",      # a ResNet upsampling block with spatial self-attention
+                        "AttnUpBlock2D",      # a ResNet upsampling block with spatial self-attention
+                        "UpBlock2D")
+                    )
+    if model_size == "large":
+        config = dict(layers_per_block=2,  # how many ResNet layers to use per UNet block
+                    block_out_channels=(128, 128, 256, 256, 512, 512),  # the number of output channels for each UNet block
+                    down_block_types=(
+                                        "DownBlock2D",  # a regular ResNet downsampling block
+                                        "DownBlock2D",
+                                        "DownBlock2D",
+                                        "DownBlock2D",
+                                        "AttnDownBlock2D",  # a ResNet downsampling block with spatial self-attention
+                                        "DownBlock2D"),
+                    up_block_types=(
+                        "UpBlock2D",  # a regular ResNet upsampling block
+                        "AttnUpBlock2D",  # a ResNet upsampling block with spatial self-attention
+                        "UpBlock2D",
+                        "UpBlock2D",
+                        "UpBlock2D",
+                        "UpBlock2D")
+                    )
+    return config
+
 class ClassConditionedUnet(nn.Module):
     def __init__(self, n_channels: int, 
-               image_size: int, 
-               num_classes: int, 
-               class_emb_size: int,
-               model_size: str = "small") -> None:
+                       image_size: int, 
+                       num_classes: int, 
+                       class_emb_size: int,
+                       model_size: str = "small") -> None:
         super().__init__()
-        assert model_size in ["small", "large"]
+        assert model_size in ["small", "large", None]
         # The embedding layer will map the class label to a vector of size class_emb_size
         #adding a null-token equal to number of classes
         self.class_emb = nn.Embedding(num_classes+1, class_emb_size)
@@ -23,16 +58,7 @@ class ClassConditionedUnet(nn.Module):
             sample_size=image_size,           # the target image resolution
             in_channels=n_channels + class_emb_size, # Additional input channels for class cond.
             out_channels=n_channels,           # the number of output channels
-            layers_per_block=2,       # how many ResNet layers to use per UNet block
-            block_out_channels=(32, 64), 
-            down_block_types=( 
-                "DownBlock2D",        # a regular ResNet downsampling block
-                "AttnDownBlock2D",    # a ResNet downsampling block with spatial self-attention
-            ), 
-            up_block_types=(
-                "AttnUpBlock2D",      # a ResNet upsampling block with spatial self-attention
-                "UpBlock2D",          # a regular ResNet upsampling block
-                ),
+            **predifined_model_config(model_size)
         )
 
     def forward(self, x: torch.Tensor, t: torch.Tensor, class_labels: torch.Tensor = None) -> torch.Tensor:
@@ -48,7 +74,7 @@ class ClassConditionedUnet(nn.Module):
         net_input = torch.cat((x, class_cond), 1) 
 
         # Feed this to the unet alongside the timestep and return the prediction
-        return self.model(net_input, t).sample 
+        return self.model(net_input, t, return_dict=False)[0]
     
 class TextConditionedUnet(nn.Module):
     def __init__(self, n_channels: int,  
@@ -79,7 +105,7 @@ class TextConditionedUnet(nn.Module):
             cross_attention_dim=512,
             addition_embed_type="text")   
               
-        self.encoder_hid_proj = nn.Identity()#nn.Linear(self.tmodel.config.hidden_size, 1280)
+        self.encoder_hid_proj = nn.Identity()
 
     def forward(self, x: torch.Tensor, t: torch.Tensor, text: str = None) -> torch.Tensor:
         bs, _, w, h = x.shape

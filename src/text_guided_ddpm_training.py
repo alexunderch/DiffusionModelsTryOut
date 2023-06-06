@@ -36,6 +36,8 @@ def run(config: DictConfig) -> None:
 
     opt = torch.optim.AdamW(net.parameters(), lr=config.lr) 
     scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=config.exp_lr_schedule)
+    sampling_noise_scheduler = instantiate(config.noise_scheduler_sample)()
+
 
     for epoch in range(config.n_epochs):
         for step, (x, y) in tqdm(enumerate(train_dataloader), total=len(train_dataloader)):
@@ -43,8 +45,8 @@ def run(config: DictConfig) -> None:
                               model=net, 
                               noise_scheduler=noise_scheduler, 
                               guidance_rate=guidance_rate)
-            loss.backward()
             wandb.log({"loss": loss.item()})
+            loss.backward()
 
             if (step+1)%config.grad_accumulation_steps==0:
                 opt.zero_grad()
@@ -53,10 +55,10 @@ def run(config: DictConfig) -> None:
             if (step+1)%config.log_samples_every==0:
                 noise_x = torch.randn(4, n_channels, image_size, image_size).to(device) # Batch of 10
                 real = x.to(device)
-                generated = tsampling_loop(net, noise_scheduler, {"sample": noise_x, "text": prompt}) 
+                generated = tsampling_loop(net, sampling_noise_scheduler, {"sample": noise_x, "text": prompt}) 
                 # wandb.log(compute_metrics(generated.expand(-1, 3,-1,-1), real.expand(-1, 3,-1,-1), device=device, text=[prompt]*len(generated)))
                 wandb.log({f'Sample generations': wandb.Image(plot_grid(generated, nrow=num_classes//2))})
-        scheduler.step()
+        scheduler.step(epoch)
 
 
 

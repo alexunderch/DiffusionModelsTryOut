@@ -1,4 +1,5 @@
 from tqdm.auto import tqdm
+from diffusers.optimization import get_cosine_schedule_with_warmup
 from metrics import compute_metrics
 from models import ClassConditionedUnet
 from scheduling import sampling_loop, train_step
@@ -32,10 +33,15 @@ def run(config: DictConfig) -> None:
                                model_size=config.model.model_size).to(device)
 
     noise_scheduler = instantiate(config.noise_scheduler)()
+    sampling_noise_scheduler = instantiate(config.noise_scheduler_sample)()
+
     wandb.log({"Noise scheduler": plot_schedule(noise_scheduler)})
 
     opt = torch.optim.AdamW(net.parameters(), lr=config.lr) 
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=config.exp_lr_schedule)
+    scheduler_2 = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=config.exp_lr_schedule)
+    scheduler = get_cosine_schedule_with_warmup(optimizer=opt,
+                                                 num_warmup_steps=config.lr_warmup_steps,
+                                                 num_training_steps=(len(train_dataloader) * config.n_epochs))
 
     for epoch in range(config.n_epochs):
         for step, (x, y) in  tqdm(enumerate(train_dataloader), total=len(train_dataloader)):
@@ -43,22 +49,24 @@ def run(config: DictConfig) -> None:
                               model=net, 
                               noise_scheduler=noise_scheduler, 
                               guidance_rate=guidance_rate)
+            wandb.log({"loss": loss.item(), "lr": scheduler.get_last_lr()[0]})
+            
             loss.backward()
-            wandb.log({"loss": loss.item()})
 
             if (step+1)%config.grad_accumulation_steps==0:
                 opt.zero_grad()
+
                 opt.step()
+                scheduler.step()
                 
             if (step+1)%config.log_samples_every==0:
                 noise_x = torch.randn(num_classes, n_channels, image_size, image_size).to(device) # Batch of 10
                 y = torch.arange(0, num_classes).to(device)
                 real = x.to(device)
-                generated = sampling_loop(net, noise_scheduler, {"sample": noise_x, "label": y}).to(device) 
+                generated = sampling_loop(net, sampling_noise_scheduler, {"sample": noise_x, "label": y}).to(device) 
                 wandb.log(compute_metrics(generated.expand(-1, 3,-1,-1), real.expand(-1, 3,-1,-1), device=device))
                 wandb.log({f'Sample generations': wandb.Image(plot_grid(generated, nrow=num_classes//4))})
-        scheduler.step()
-
+        scheduler_2.step(epoch)
 
 
 if __name__ == "__main__":

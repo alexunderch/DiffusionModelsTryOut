@@ -1,15 +1,17 @@
 wandb:
-  project_name: base_ddpm_training
+  project_name: ddpm_training
   name: class_guided
 defaults:
   - dataset: mnist
-  - noise_scheduler: ddim
+  - noise_scheduler: ddpm
+  - noise_scheduler_sample: ddim
 model:
   model_size: small
   class_emb_size: 6
 seed: 42
-exp_lr_schedule: 0.91
-batch_size: 32
+lr_warmup_steps: 100
+exp_lr_schedule: 0.95
+batch_size: 128
 num_workers: 2
 guidance_rate: 0
 device: cuda

@@ -1,4 +1,3 @@
-from diffusers import SchedulerMixin, DDIMScheduler
 from dataclasses import dataclass
 from torch.utils.data import DataLoader
 from typing import Tuple, Callable, Union
@@ -10,6 +9,12 @@ from torch import Tensor
 from PIL import Image
 import torch
 
+from diffusers import (SchedulerMixin, 
+                       DDIMScheduler, 
+                       DDPMScheduler, 
+                       PNDMScheduler)
+
+
 @dataclass
 class Dataset:
     name: str
@@ -20,7 +25,7 @@ class Dataset:
     def _set_image_transform(self, transform: Callable = None) -> None:
         if transform is None:
             self.transform =  torchvision.transforms.Compose([
-                torchvision.transforms.RandomResizedCrop(32),
+                torchvision.transforms.Resize((128, 128)),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize([0.485, 0.456, 0.406], 
                                                  [0.229, 0.224, 0.225])
@@ -66,7 +71,7 @@ class Dataset:
             dataset = torchvision.datasets.Flowers102(self.root, 
                                                      split=self.train_split,
                                                     download=self.download)
-            return DataLoader(dataset, batch_size, shuffle=True, num_workers=num_workers, collate_fn=collate_fn), 3, 32, 102
+            return DataLoader(dataset, batch_size, shuffle=True, num_workers=num_workers, collate_fn=collate_fn), 3, 128, 102
 
 
 @dataclass
@@ -77,12 +82,25 @@ class NoiseScheduler:
     beta_start: float = 0.0001
     beta_end: float = 0.02
     beta_schedule: str = 'linear'
+    dynamic_thresholding: bool = False
 
     def __call__(self):
         if self.name == "DDIM":
-            nsch = DDIMScheduler(num_train_timesteps=self.num_train_timesteps, beta_schedule=self.beta_schedule)
-            nsch.set_timesteps(self.inference_timesteps)
-            return nsch
+            nsch = DDIMScheduler
+        elif self.name == "DDPM":
+            nsch = DDPMScheduler
+        elif self.name == "PNDM":
+            nsch = PNDMScheduler
+            
+        nsch = nsch(
+            num_train_timesteps=self.num_train_timesteps,
+            beta_start=self.beta_start,
+            beta_end=self.beta_end,
+            beta_schedule=self.beta_schedule,
+            thresholding=self.dynamic_thresholding
+        )
+        nsch.set_timesteps(self.inference_timesteps)
+        return nsch
         
 def plot_grid(generated:Tensor, nrow: int) -> Image:
     grid = make_grid(generated, nrow=nrow)
@@ -103,10 +121,8 @@ def set_seed(seed: int = 42) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
-    # When running on the CuDNN backend, two further options must be set
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    # Set a fixed value for the hash seed
     os.environ["PYTHONHASHSEED"] = str(seed)
     print(f"Random seed set as {seed}")
     return True

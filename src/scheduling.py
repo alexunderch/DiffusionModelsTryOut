@@ -30,7 +30,7 @@ def train_step(
     timesteps = torch.randint(0, noise_scheduler.num_train_timesteps, (len(x),), device=x.device).long()
     noisy_x = noise_scheduler.add_noise(x, noise, timesteps)
     # Get the model prediction
-    pred = (1 + guidance_rate) * model(noisy_x, timesteps, None) - guidance_rate * model(noisy_x, timesteps, y)
+    pred = (1 + guidance_rate) * model(noisy_x, timesteps, y) - guidance_rate * model(noisy_x, timesteps, None)
     return nn.functional.mse_loss(pred, noise)
     
 def ttrain_step(
@@ -46,9 +46,9 @@ def ttrain_step(
     noise = torch.randn_like(x)
     timesteps = torch.randint(0, noise_scheduler.num_train_timesteps, (len(x),), device=x.device).long()
     noisy_x = noise_scheduler.add_noise(x, noise, timesteps)
-    noise_pred_uncond, noise_pred_text = model(noisy_x, timesteps, text=y).chunk(2)
+    noise_pred_text, noise_pred_uncond = model(noisy_x, timesteps, text=y).chunk(2)
     # Get the model prediction
-    pred = (1 + guidance_rate) * noise_pred_uncond- guidance_rate * noise_pred_text 
+    pred = (1 + guidance_rate) * noise_pred_text - guidance_rate *  noise_pred_uncond
     return nn.functional.mse_loss(pred, noise)
 
 
