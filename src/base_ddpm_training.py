@@ -60,8 +60,8 @@ def run(config: DictConfig) -> None:
                 scheduler.step()
                 
             if (step+1)%config.log_samples_every==0:
-                noise_x = torch.randn(num_classes, n_channels, image_size, image_size).to(device) # Batch of 10
-                y = torch.arange(0, num_classes).to(device)
+                noise_x = torch.randn(min(len(x), num_classes), n_channels, image_size, image_size).to(device) # Batch of 10
+                y = torch.arange(0, min(len(x), num_classes)).to(device)
                 real = x.to(device)
                 generated = sampling_loop(net, sampling_noise_scheduler, {"sample": noise_x, "label": y}).to(device) 
                 wandb.log(compute_metrics(generated.expand(-1, 3,-1,-1), real.expand(-1, 3,-1,-1), device=device))

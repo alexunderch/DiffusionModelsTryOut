@@ -58,7 +58,7 @@ class ClassConditionedUnet(nn.Module):
             out_channels=n_channels,           # the number of output channels
             **predifined_model_config(model_size)
         )
-
+        print(f"The model has {sum(p.numel() for p in self.parameters() if p.requires_grad)} trainable parameters")
     def forward(self, x: torch.Tensor, t: torch.Tensor, class_labels: torch.Tensor = None) -> torch.Tensor:
         bs, _, w, h = x.shape
         if class_labels is None:
@@ -104,6 +104,7 @@ class TextConditionedUnet(nn.Module):
             addition_embed_type="text")   
               
         self.encoder_hid_proj = nn.Identity()
+        print(f"The model has {sum(p.numel() for p in self.parameters() if p.requires_grad)} trainable parameters")
 
     def forward(self, x: torch.Tensor, t: torch.Tensor, text: str = None) -> torch.Tensor:
         bs, _, w, h = x.shape

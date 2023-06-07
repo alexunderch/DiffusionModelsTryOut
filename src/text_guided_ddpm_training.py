@@ -58,7 +58,7 @@ def run(config: DictConfig) -> None:
                 real = x.to(device)
                 generated = tsampling_loop(net, sampling_noise_scheduler, {"sample": noise_x, "text": prompt}) 
                 # wandb.log(compute_metrics(generated.expand(-1, 3,-1,-1), real.expand(-1, 3,-1,-1), device=device, text=[prompt]*len(generated)))
-                wandb.log({f'Sample generations': wandb.Image(plot_grid(generated, nrow=num_classes//2))})
+                wandb.log({f'Sample generations': wandb.Image(plot_grid(generated, nrow=1))})
         scheduler.step(epoch)
 
 
