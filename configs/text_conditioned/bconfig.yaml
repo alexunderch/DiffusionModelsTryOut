@@ -13,7 +13,7 @@ seed: 42
 exp_lr_schedule: 0.91
 batch_size: 10
 num_workers: 2
-guidance_rate: 10
+guidance_rate: 0
 device: cuda
 lr: 1.0e-3
 n_epochs: 10

@@ -25,7 +25,7 @@ class Dataset:
     def _set_image_transform(self, transform: Callable = None) -> None:
         if transform is None:
             self.transform =  torchvision.transforms.Compose([
-                torchvision.transforms.Resize((128, 128)),
+                torchvision.transforms.Resize((256, 256)),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize([0.485, 0.456, 0.406], 
                                                  [0.229, 0.224, 0.225])
@@ -55,12 +55,12 @@ class Dataset:
                                                         transform=torchvision.transforms.ToTensor(), 
                                                         download=self.download)
             return DataLoader(dataset, batch_size, shuffle=True, num_workers=num_workers), 1, 28, 10
-        if self.name == "Omniglot":
-            dataset = torchvision.datasets.Omniglot(self.root, 
-                                                    background=self.train_split,
-                                                    transform=self.transform, 
-                                                    download=self.download)
-            return DataLoader(dataset, batch_size, shuffle=True, num_workers=num_workers), 1, 128, 1623
+        if self.name == "EMNIST":
+            dataset = torchvision.datasets.EMNIST(self.root, 
+                                                        self.train_split, 
+                                                        transform=torchvision.transforms.ToTensor(), 
+                                                        download=self.download)
+            return DataLoader(dataset, batch_size, shuffle=True, num_workers=num_workers), 1, 28, 10
         if self.name == "LFW":
             dataset = torchvision.datasets.LFWPeople(self.root, 
                                                      split=self.train_split,
@@ -71,7 +71,7 @@ class Dataset:
             dataset = torchvision.datasets.Flowers102(self.root, 
                                                      split=self.train_split,
                                                     download=self.download)
-            return DataLoader(dataset, batch_size, shuffle=True, num_workers=num_workers, collate_fn=collate_fn), 3, 128, 102
+            return DataLoader(dataset, batch_size, shuffle=True, num_workers=num_workers, collate_fn=collate_fn), 3, 256, 102
 
 
 @dataclass
@@ -97,7 +97,7 @@ class NoiseScheduler:
             beta_start=self.beta_start,
             beta_end=self.beta_end,
             beta_schedule=self.beta_schedule,
-            thresholding=self.dynamic_thresholding
+            # thresholding=self.dynamic_thresholding 
         )
         nsch.set_timesteps(self.inference_timesteps)
         return nsch

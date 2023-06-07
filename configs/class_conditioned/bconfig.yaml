@@ -9,13 +9,13 @@ model:
   model_size: small
   class_emb_size: 6
 seed: 42
-lr_warmup_steps: 100
+lr_warmup_steps: 0.2
 exp_lr_schedule: 0.95
 batch_size: 128
 num_workers: 2
 guidance_rate: 0
 device: cuda
 lr: 1.0e-3
-n_epochs: 10
+n_epochs: 8
 log_samples_every: 100
 grad_accumulation_steps: 1

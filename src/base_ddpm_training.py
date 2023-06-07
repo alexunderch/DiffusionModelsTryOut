@@ -40,7 +40,7 @@ def run(config: DictConfig) -> None:
     opt = torch.optim.AdamW(net.parameters(), lr=config.lr) 
     scheduler_2 = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=config.exp_lr_schedule)
     scheduler = get_cosine_schedule_with_warmup(optimizer=opt,
-                                                 num_warmup_steps=config.lr_warmup_steps,
+                                                 num_warmup_steps=int(config.lr_warmup_steps * len(train_dataloader)),
                                                  num_training_steps=(len(train_dataloader) * config.n_epochs))
 
     for epoch in range(config.n_epochs):
@@ -51,11 +51,11 @@ def run(config: DictConfig) -> None:
                               guidance_rate=guidance_rate)
             wandb.log({"loss": loss.item(), "lr": scheduler.get_last_lr()[0]})
             
-            loss.backward()
+            #loss.backward()
 
             if (step+1)%config.grad_accumulation_steps==0:
                 opt.zero_grad()
-
+                loss.backward()
                 opt.step()
                 scheduler.step()
                 

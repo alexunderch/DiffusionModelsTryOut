@@ -46,10 +46,11 @@ def run(config: DictConfig) -> None:
                               noise_scheduler=noise_scheduler, 
                               guidance_rate=guidance_rate)
             wandb.log({"loss": loss.item()})
-            loss.backward()
+            #loss.backward()
 
             if (step+1)%config.grad_accumulation_steps==0:
                 opt.zero_grad()
+                loss.backward()
                 opt.step()
                 
             if (step+1)%config.log_samples_every==0:
